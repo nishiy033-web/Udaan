@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Udaan — Error Pattern Detection for Teachers</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink: #18332a; --paper: #f8f3e9; --cream: #fffdf8; --teal: #355449;
+      --rust: #d9542b; --mustard: #e7ae32; --sage: #c9d8c4; --pale-sage: #e4ecdf;
+      --line: rgba(24, 51, 42, 0.16); --muted: #617269;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; width: 100%; min-height: 100vh; font-family: "DM Sans", sans-serif; color: var(--ink); overflow-x: hidden; }
+    button, input, select, textarea { font: inherit; }
+    .paper-grid { background-image: linear-gradient(rgba(24,51,42,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(24,51,42,.04) 1px, transparent 1px); background-size: 28px 28px; }
+    .serif-heading, .brand-word, .welcome-copy { font-family: "Fraunces", serif; letter-spacing: -0.035em; }
+    .shape { position: absolute; border-radius: 999px; pointer-events: none; }
+    .signin-card { box-shadow: 16px 17px 0 var(--ink); }
+    .reveal { animation: rise-in 620ms cubic-bezier(.2,.8,.2,1) both; }
+    .reveal-delay { animation-delay: 100ms; }
+    .reveal-delay-two { animation-delay: 180ms; }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* shell */
+    .app-shell { width: 100%; min-height: 100vh; display: grid; grid-template-columns: 258px minmax(0,1fr); }
+    .sidebar { min-height: 100vh; display: flex; flex-direction: column; padding: 30px 22px 24px; background: rgba(255,253,248,.88); border-right: 1px solid var(--line); }
+    .logo-mark { position: relative; display: flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 50%; background: var(--ink); }
+    .logo-mark::before, .logo-mark::after { position: absolute; content: ""; width: 12px; height: 12px; transform: rotate(45deg); }
+    .logo-mark::before { background: var(--mustard); transform: translate(-5px,-5px) rotate(45deg); }
+    .logo-mark::after { background: var(--rust); transform: translate(7px,7px) rotate(45deg); }
+    .nav-item { display: flex; width: 100%; align-items: center; gap: 12px; border: 1px solid transparent; padding: 11px 12px; color: var(--teal); text-align: left; cursor: pointer; background: none; transition: background 160ms ease, border-color 160ms ease; }
+    .nav-item:hover, .nav-item:focus-visible { background: rgba(201,216,196,.52); border-color: var(--line); outline: none; }
+    .nav-item.is-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .nav-item:focus-visible, .primary-action:focus-visible, .secondary-action:focus-visible, .review-link:focus-visible { outline: 3px solid rgba(231,174,50,.6); outline-offset: 3px; }
+    .main-panel { min-width: 0; padding: 42px 54px 46px; }
+    .content-frame { width: 100%; max-width: 1120px; margin: 0 auto; }
+    .eyebrow { color: var(--rust); font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .primary-action, .secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; font-weight: 700; cursor: pointer; transition: transform 160ms ease, background 160ms ease; }
+    .primary-action { min-height: 48px; padding: 0 18px; background: var(--ink); color: #fff; }
+    .primary-action:hover { transform: translateY(-1px); background: #28483c; }
+    .secondary-action { min-height: 42px; padding: 0 14px; background: transparent; color: var(--ink); border-color: rgba(24,51,42,.26); }
+    .secondary-action:hover { background: rgba(201,216,196,.48); }
+    .section-frame { border-top: 1px solid var(--ink); padding-top: 20px; }
+
+    /* dashboard */
+    .insight-banner { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: rgba(201,216,196,.55); }
+    .metric-card { min-height: 148px; border: 1px solid var(--line); background: var(--cream); padding: 22px; }
+    .metric-card:hover { border-color: rgba(24,51,42,.34); }
+    .assessment-table { width: 100%; border-collapse: collapse; background: var(--cream); border: 1px solid var(--line); }
+    .assessment-table th, .assessment-table td { padding: 17px 18px; border-bottom: 1px solid var(--line); text-align: left; }
+    .assessment-table tr:last-child td { border-bottom: 0; }
+    .assessment-table th { color: var(--teal); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: rgba(201,216,196,.3); }
+    .status { display: inline-flex; align-items: center; gap: 7px; font-size: .84rem; font-weight: 700; }
+    .status::before { width: 8px; height: 8px; border-radius: 999px; content: ""; background: currentColor; }
+    .error-row { display: grid; grid-template-columns: minmax(170px,235px) minmax(180px,1fr) 92px; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line); transition: background 250ms ease, padding 250ms ease; }
+    .error-row:last-child { border-bottom: 0; }
+    .error-track { height: 10px; overflow: hidden; background: #e7e3d9; border-radius: 999px; }
+    .error-fill { display: block; height: 100%; border-radius: 999px; }
+    .attention-flash { padding-right: 12px; padding-left: 12px; background: rgba(231,174,50,.2); }
+
+    /* upload */
+    .upload-dropzone { border: 1px dashed rgba(24,51,42,.42); background: rgba(255,253,248,.72); min-height: 240px; transition: background 160ms ease, border-color 160ms ease; }
+    .upload-dropzone:hover, .upload-dropzone:focus-within { background: #fffdf8; border-color: var(--ink); }
+    .upload-field { width: 100%; border: 1px solid rgba(24,51,42,.28); background: #fffdf8; padding: 12px 13px; color: var(--ink); }
+    .upload-field:focus { outline: 3px solid rgba(231,174,50,.5); outline-offset: 2px; border-color: var(--ink); }
+    .upload-textarea { min-height: 92px; resize: vertical; }
+    .upload-actions { border-top: 1px solid var(--line); }
+
+    /* analysis */
+    .summary-strip { display: grid; grid-template-columns: 1.1fr .8fr 1.25fr 1fr 1.05fr; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); background: rgba(255,253,248,.7); }
+    .summary-cell { min-width: 0; padding: 17px 18px 18px; border-right: 1px solid var(--line); }
+    .summary-cell:last-child { border-right: 0; }
+    .summary-label { color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+    .status-complete { display: inline-flex; align-items: center; gap: 7px; color: var(--teal); font-weight: 700; }
+    .status-complete::before { width: 8px; height: 8px; border-radius: 50%; background: currentColor; content: ""; }
+    .analysis-layout { display: grid; grid-template-columns: minmax(0,1.36fr) minmax(320px,.82fr); gap: 44px; align-items: start; }
+    .finding-list { margin-top: 24px; border-top: 1px solid var(--line); }
+    .finding { padding: 22px 0 24px; border-bottom: 1px solid var(--line); transition: background 220ms ease, padding 220ms ease; }
+    .finding.is-highlighted { padding-right: 14px; padding-left: 14px; background: rgba(231,174,50,.15); }
+    .finding-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .pattern-tag { display: inline-block; border: 1px solid rgba(24,51,42,.3); padding: 5px 8px; color: var(--teal); font-size: .71rem; font-weight: 700; letter-spacing: .08em; }
+    .confidence { color: var(--rust); font-size: .9rem; font-weight: 700; white-space: nowrap; }
+    .occurrence-line { margin-top: 12px; color: var(--muted); font-size: .88rem; }
+    .evidence-box { margin-top: 16px; border-left: 3px solid var(--sage); background: rgba(201,216,196,.23); padding: 12px 14px; }
+    .evidence-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; color: var(--teal); font-size: .88rem; line-height: 1.5; }
+    .evidence-row + .evidence-row { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(24,51,42,.11); }
+    .answer-wrong { color: var(--rust); font-weight: 700; }
+    .finding-note { margin-top: 15px; color: var(--teal); line-height: 1.6; }
+    .evidence-panel { border: 1px solid var(--line); background: var(--cream); }
+    .evidence-heading { display: flex; align-items: center; gap: 9px; border-bottom: 1px solid var(--line); padding: 16px 18px; }
+    .worksheet { margin: 18px; border: 1px solid rgba(24,51,42,.28); background: #fffefa; padding: 20px 18px 18px; box-shadow: 4px 5px 0 rgba(24,51,42,.08); transform: rotate(-.7deg); }
+    .worksheet-line { height: 1px; margin: 14px 0; background: rgba(24,51,42,.13); }
+    .problem { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 13px; color: #2a4038; font-family: "Fraunces", serif; font-size: 1.02rem; }
+    .student-answer { min-width: 56px; border-bottom: 2px solid var(--teal); color: var(--teal); font-family: "DM Sans", sans-serif; font-size: .96rem; font-weight: 700; text-align: center; }
+    .annotation { position: relative; margin: 5px 0 13px 14px; border-left: 2px solid var(--rust); padding-left: 9px; color: var(--rust); font-size: .71rem; font-weight: 700; line-height: 1.3; }
+    .evidence-key { display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--line); padding: 13px 18px 16px; color: var(--muted); font-size: .78rem; }
+    .key-mark { width: 12px; height: 12px; border-left: 3px solid var(--rust); border-bottom: 1px solid var(--rust); }
+    .observation { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 18px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: var(--pale-sage); padding: 21px 22px; }
+    .observation-icon { display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 50%; background: var(--mustard); color: var(--ink); }
+    .action-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid var(--line); padding-top: 24px; flex-wrap: wrap; }
+    .review-link { border: 0; border-bottom: 1px solid currentColor; padding: 2px 0; background: transparent; color: var(--teal); font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .review-link:hover { color: var(--ink); }
+    .interaction-status { min-height: 22px; margin-top: 16px; color: var(--teal); font-size: .88rem; font-weight: 600; }
+
+    /* placeholder view */
+    .empty-state { border: 1px dashed rgba(24,51,42,.35); background: rgba(255,253,248,.6); padding: 54px 30px; text-align: center; }
+
+    @media (max-width: 1040px) {
+      .summary-strip { grid-template-columns: repeat(3,1fr); }
+      .summary-cell:nth-child(3) { border-right: 0; }
+      .summary-cell:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+      .analysis-layout { grid-template-columns: 1fr; }
+      .evidence-panel { max-width: 560px; }
+    }
+    @media (max-width: 920px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { min-height: auto; padding: 18px 22px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .sidebar-nav { display: flex; gap: 5px; overflow-x: auto; margin-top: 18px; }
+      .nav-item { width: auto; white-space: nowrap; }
+      .teacher-profile { display: none; }
+      .main-panel { padding: 32px 24px 40px; }
+    }
+    @media (max-width: 640px) {
+      .main-panel { padding: 26px 18px 34px; }
+      .assessment-table { min-width: 650px; }
+      .table-scroll { overflow-x: auto; }
+      .error-row { grid-template-columns: 1fr; gap: 8px; }
+      .summary-strip { grid-template-columns: 1fr 1fr; }
+      .finding-title-row, .action-row { align-items: flex-start; flex-direction: column; }
+      .evidence-row { grid-template-columns: 1fr; gap: 3px; }
+    }
+  </style>
+</head>
+<body class="paper-grid">
+
+  <!-- ===================== SIGN IN VIEW ===================== -->
+  <div id="view-signin">
+    <div class="relative w-full min-h-screen overflow-hidden px-5 py-6 sm:px-10 lg:px-16 lg:py-10">
+      <div class="shape h-52 w-52 -right-16 top-20 border-[26px] border-[#e7ae32] opacity-85"></div>
+      <div class="shape h-36 w-36 -left-12 bottom-14 bg-[#c9d8c4]"></div>
+      <div class="shape h-8 w-8 right-[40%] bottom-16 bg-[#d9542b]"></div>
+
+      <header class="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="logo-mark" aria-hidden="true"></div>
+          <span class="text-xl font-bold tracking-tight">Udaan</span>
+        </div>
+        <span class="rounded-full border border-[#18332a]/20 bg-[#f8f3e9] px-4 py-2 text-sm font-medium">Hackathon Prototype</span>
+      </header>
+
+      <main class="relative z-10 mx-auto flex w-full max-w-7xl items-center py-12 lg:min-h-[calc(100vh-132px)] lg:py-8">
+        <section class="grid w-full items-center gap-10 lg:grid-cols-[1.08fr_.92fr] lg:gap-20">
+          <div class="reveal max-w-2xl">
+            <div class="mb-7 inline-flex items-center gap-2 rounded-full bg-[#e4ecdf] px-4 py-2 text-sm font-bold uppercase tracking-[0.15em] text-[#355449]">
+              <span class="h-2 w-2 rounded-full bg-current"></span>
+              <span>Teacher Portal</span>
+            </div>
+            <h1 class="welcome-copy max-w-xl text-5xl font-bold leading-[0.98] sm:text-6xl lg:text-7xl">Understand how each student is struggling, not just that they are.</h1>
+            <p class="mt-7 max-w-lg text-lg leading-relaxed text-[#355449]">Udaan turns handwritten assessments into evidence-backed error patterns — so you can spend less time guessing and more time teaching.</p>
+
+            <div class="mt-10 grid max-w-xl grid-cols-2 gap-4">
+              <article class="rounded-2xl border border-[#18332a]/10 bg-[#fffdf8] p-5">
+                <i data-lucide="map-pinned" class="mb-5 h-5 w-5"></i>
+                <h2 class="font-bold">Built for classrooms</h2>
+                <p class="mt-1 text-sm leading-relaxed text-[#617269]">Designed around real special-education assessment workflows.</p>
+              </article>
+              <article class="rounded-2xl border border-[#18332a]/10 bg-[#fffdf8] p-5">
+                <i data-lucide="package-check" class="mb-5 h-5 w-5"></i>
+                <h2 class="font-bold">Evidence, not labels</h2>
+                <p class="mt-1 text-sm leading-relaxed text-[#617269]">Every detected pattern comes with the work that shows it.</p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="signin-card reveal-late mx-auto w-full max-w-md rounded-[2rem] border-2 border-[#18332a] bg-[#fffdf8] p-7 sm:p-9" aria-label="Sign in">
+            <div class="mb-8 flex items-start justify-between gap-6">
+              <div>
+                <p class="text-sm font-bold uppercase tracking-[0.14em] text-[#617269]">Teacher Sign In</p>
+                <h2 class="mt-2 text-2xl font-bold leading-tight">Welcome back</h2>
+              </div>
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e7ae32] text-[#18332a]">
+                <i data-lucide="arrow-up-right" class="h-5 w-5"></i>
+              </div>
+            </div>
+            <div class="space-y-5">
+              <div>
+                <p class="mb-2 text-sm font-bold">Email</p>
+                <div class="flex items-center justify-between rounded-xl border border-[#18332a]/25 px-4 py-4">
+                  <span class="text-sm text-[#617269]">anjali.rao@school.edu</span>
+                  <i data-lucide="mail" class="h-4 w-4 opacity-60"></i>
+                </div>
+              </div>
+              <div>
+                <p class="mb-2 text-sm font-bold">Password</p>
+                <div class="flex items-center justify-between rounded-xl border border-[#18332a]/25 px-4 py-4">
+                  <span class="text-sm tracking-[0.3em] text-[#617269]">••••••••</span>
+                  <i data-lucide="lock-keyhole" class="h-4 w-4 opacity-60"></i>
+                </div>
+              </div>
+            </div>
+            <div class="mt-5 flex items-center gap-2">
+              <span class="flex h-4 w-4 items-center justify-center rounded border border-[#18332a]/35 bg-[#f8f3e9]"><i data-lucide="check" class="h-3 w-3"></i></span>
+              <span class="text-sm">Keep me signed in</span>
+            </div>
+            <button id="continue-button" class="primary-action mt-8 w-full rounded-xl px-5 py-4">
+              <span>Continue to dashboard</span>
+              <i data-lucide="arrow-right" class="h-5 w-5"></i>
+            </button>
+            <p class="mt-5 text-center text-xs leading-relaxed text-[#617269]">This is a visual sign-in mockup for the prototype demo — no real authentication.</p>
+          </aside>
+        </section>
+      </main>
+
+      <footer class="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 border-t border-[#18332a]/15 pt-5 text-sm">
+        <p class="text-[#617269]">Udaan is a decision-support tool for special educators — not a diagnostic service.</p>
+        <div class="hidden items-center gap-2 sm:flex">
+          <span class="h-2 w-2 rounded-full bg-[#d9542b]"></span><span class="h-2 w-2 rounded-full bg-[#e7ae32]"></span><span class="h-2 w-2 rounded-full bg-[#18332a]"></span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===================== APP SHELL ===================== -->
+  <div id="app-shell" class="app-shell" style="display:none;">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <header class="flex items-center gap-3">
+        <div class="logo-mark" aria-hidden="true"></div><span class="brand-word text-lg font-bold">Udaan</span>
+      </header>
+      <nav class="sidebar-nav mt-12 space-y-2" aria-label="Sections">
+        <button type="button" class="nav-item is-active" data-view="dashboard"><i data-lucide="layout-dashboard" class="h-5 w-5"></i><span>Dashboard</span></button>
+        <button type="button" class="nav-item" data-view="students"><i data-lucide="users-round" class="h-5 w-5"></i><span>Students</span></button>
+        <button type="button" class="nav-item" data-view="upload"><i data-lucide="clipboard-list" class="h-5 w-5"></i><span>Assessments</span></button>
+        <button type="button" class="nav-item" data-view="patterns"><i data-lucide="scan-search" class="h-5 w-5"></i><span>Error Patterns</span></button>
+        <button type="button" class="nav-item" data-view="progress"><i data-lucide="trending-up" class="h-5 w-5"></i><span>Progress</span></button>
+      </nav>
+      <div class="teacher-profile mt-auto border-t border-[#18332a]/15 pt-5">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#c9d8c4] font-bold text-[#18332a]">A</div>
+          <div class="min-w-0">
+            <p class="font-bold">Anjali Rao</p>
+            <p class="mt-0.5 text-sm text-[#617269]">Special Educator</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <div class="content-frame">
+
+        <!-- ---------- DASHBOARD ---------- -->
+        <div id="view-dashboard">
+          <header class="reveal flex items-end justify-between gap-7 border-b border-[#18332a]/20 pb-8">
+            <div>
+              <p class="eyebrow mb-3">Class Overview</p>
+              <h1 class="serif-heading text-4xl font-bold leading-tight sm:text-5xl">Good morning, Anjali</h1>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-[#355449]">Here's what's emerging across your class this week.</p>
+            </div>
+            <div class="shrink-0">
+              <button class="primary-action" data-goto="upload"><i data-lucide="upload" class="h-5 w-5"></i><span>Upload Assessment</span></button>
+            </div>
+          </header>
+
+          <section class="insight-banner reveal reveal-delay mt-8 flex items-center justify-between gap-5 px-5 py-4 flex-wrap">
+            <div class="flex items-center gap-3">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e7ae32] text-[#18332a]"><i data-lucide="lightbulb" class="h-4 w-4"></i></div>
+              <div>
+                <p class="text-xs font-bold uppercase tracking-[0.1em] text-[#617269]">Priority Insight</p>
+                <p class="mt-1 font-semibold">5 students show a recurring place-value pattern</p>
+              </div>
+            </div>
+            <button id="view-group-button" class="secondary-action shrink-0"><span>View Group</span><i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+          </section>
+
+          <section class="reveal reveal-delay mt-11">
+            <div class="section-frame">
+              <p class="eyebrow">This Term</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Class Snapshot</h2>
+              <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="metric-card"><i data-lucide="users" class="h-5 w-5 text-[#355449]"></i><p class="mt-6 text-sm font-semibold text-[#617269]">Students Analyzed</p><p class="serif-heading mt-1 text-4xl font-bold">18</p></article>
+                <article class="metric-card"><i data-lucide="file-check-2" class="h-5 w-5 text-[#355449]"></i><p class="mt-6 text-sm font-semibold text-[#617269]">Assessments Reviewed</p><p class="serif-heading mt-1 text-4xl font-bold">42</p></article>
+                <article class="metric-card"><i data-lucide="circle-alert" class="h-5 w-5 text-[#d9542b]"></i><p class="mt-6 text-sm font-semibold text-[#617269]">Need Attention</p><p class="serif-heading mt-1 text-4xl font-bold">5</p></article>
+                <article class="metric-card"><i data-lucide="move-up-right" class="h-5 w-5 text-[#355449]"></i><p class="mt-6 text-sm font-semibold text-[#617269]">Improving</p><p class="serif-heading mt-1 text-4xl font-bold">9</p></article>
+              </div>
+            </div>
+          </section>
+
+          <section class="reveal reveal-delay-two mt-12">
+            <div class="section-frame">
+              <p class="eyebrow">Latest</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Recent Assessments</h2>
+              <div class="table-scroll mt-6">
+                <table class="assessment-table">
+                  <thead><tr><th>Student</th><th>Assessment</th><th>Date</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td class="font-bold">Rahul Kumar</td><td>Number Sense Check-in</td><td>12 Sep 2026</td><td><span class="status" style="color:var(--teal)">Analysis complete</span></td></tr>
+                    <tr><td class="font-bold">Meera Iyer</td><td>Reading Fluency Sample</td><td>10 Sep 2026</td><td><span class="status" style="color:var(--teal)">Analysis complete</span></td></tr>
+                    <tr><td class="font-bold">Aarav Mehta</td><td>Worksheet — Fractions</td><td>9 Sep 2026</td><td><span class="status" style="color:var(--mustard)">Reviewing</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="error-patterns-section" class="reveal reveal-delay-two mt-12 pb-3">
+            <div class="section-frame">
+              <p class="eyebrow">Class Patterns</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Error Pattern Distribution</h2>
+              <p class="mt-3 max-w-2xl leading-7 text-[#355449]">Recurring patterns across the class, ranked by how many students they affect.</p>
+              <div class="mt-6 border-y border-[#18332a]/15 px-1">
+                <div class="error-row"><span class="font-bold">Digit Reversal</span><div class="error-track"><span class="error-fill" style="width:100%;background:#d9542b"></span></div><span class="text-right font-semibold">7 students</span></div>
+                <div id="place-value-row" class="error-row"><span class="font-bold">Place-Value Confusion</span><div class="error-track"><span class="error-fill" style="width:72%;background:#e7ae32"></span></div><span class="text-right font-semibold">5 students</span></div>
+                <div class="error-row"><span class="font-bold">Sequencing Errors</span><div class="error-track"><span class="error-fill" style="width:57%;background:#6e9683"></span></div><span class="text-right font-semibold">4 students</span></div>
+                <div class="error-row"><span class="font-bold">Calculation Errors</span><div class="error-track"><span class="error-fill" style="width:43%;background:#355449"></span></div><span class="text-right font-semibold">3 students</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ---------- UPLOAD ---------- -->
+        <div id="view-upload" style="display:none;">
+          <nav class="mb-8 flex items-center gap-2 text-sm text-[#617269]">
+            <a href="#" data-goto="dashboard" class="hover:text-[#18332a]">Dashboard</a><span>/</span><span class="font-semibold text-[#18332a]">Upload</span>
+          </nav>
+          <div class="section-frame">
+            <p class="eyebrow">Assessment Workflow</p>
+            <h1 class="serif-heading mt-2 text-4xl font-bold leading-tight sm:text-5xl">Upload Assessment</h1>
+            <p class="mt-4 max-w-2xl text-base leading-7 text-[#355449]">Upload a student's worksheet to identify recurring error patterns.</p>
+          </div>
+          <div class="upload-dropzone mt-10 flex flex-col items-center justify-center px-6 py-10 text-center" tabindex="0">
+            <i data-lucide="file-up" class="h-10 w-10 text-[#355449]"></i>
+            <h2 class="serif-heading mt-5 text-2xl font-bold">Upload a worksheet</h2>
+            <p class="mt-2 max-w-md leading-7 text-[#355449]">Drag and drop an image or PDF here, or browse your files.</p>
+            <p class="mt-3 text-sm text-[#617269]">Supported formats: JPG, PNG, PDF</p>
+            <label class="secondary-action mt-6 cursor-pointer" for="assessment-upload">Browse files</label>
+            <input id="assessment-upload" type="file" class="sr-only" accept=".pdf,.jpg,.jpeg,.png">
+            <p id="upload-file-status" class="mt-3 text-sm text-[#617269]" aria-live="polite"></p>
+          </div>
+          <form id="assessment-details-form" class="mt-12">
+            <div class="section-frame">
+              <h2 class="serif-heading text-3xl font-bold">Assessment details</h2>
+              <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div><label class="mb-2 block font-semibold" for="student-name">Student name</label><select id="student-name" class="upload-field"><option>Rahul Kumar</option><option>Meera Iyer</option><option>Aarav Mehta</option></select></div>
+                <div><label class="mb-2 block font-semibold" for="subject">Subject</label><select id="subject" class="upload-field"><option>Mathematics</option><option>Reading &amp; Writing</option></select></div>
+                <div><label class="mb-2 block font-semibold" for="assessment-date">Assessment date</label><input id="assessment-date" class="upload-field" type="date" value="2026-09-12"></div>
+                <div><label class="mb-2 block font-semibold" for="assessment-type">Assessment type</label><select id="assessment-type" class="upload-field"><option>Number Sense Check-in</option><option>Worksheet</option><option>Reading Fluency Sample</option></select></div>
+                <div class="sm:col-span-2"><label class="mb-2 block font-semibold" for="assessment-notes">Notes <span class="font-normal text-[#617269]">(optional)</span></label><textarea id="assessment-notes" class="upload-field upload-textarea" placeholder="Add any context that may help with review."></textarea></div>
+              </div>
+            </div>
+            <div class="upload-actions mt-10 flex flex-col gap-5 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <p class="max-w-[32rem] text-sm leading-6 text-[#617269]">Udaan identifies observable error patterns to support teacher decisions. It does not provide a clinical diagnosis.</p>
+              <div class="flex gap-3">
+                <button type="button" id="cancel-upload" class="secondary-action">Cancel</button>
+                <button type="submit" class="primary-action">Analyse Assessment</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ---------- ANALYSIS ---------- -->
+        <div id="view-analysis" style="display:none;">
+          <header class="reveal">
+            <p class="eyebrow">Assessment Analysis</p>
+            <h1 class="serif-heading mt-2 text-4xl font-bold">Rahul Kumar — Number Sense Check-in</h1>
+            <p class="mt-4 max-w-2xl leading-7 text-[#355449]">Evidence-backed error patterns detected from this assessment.</p>
+          </header>
+
+          <section class="reveal reveal-delay mt-8">
+            <div class="summary-strip">
+              <div class="summary-cell"><p class="summary-label">Student</p><p class="mt-1.5 font-bold">Rahul Kumar</p></div>
+              <div class="summary-cell"><p class="summary-label">Subject</p><p class="mt-1.5 font-bold">Mathematics</p></div>
+              <div class="summary-cell"><p class="summary-label">Assessment</p><p class="mt-1.5 font-bold">Number Sense Check-in</p></div>
+              <div class="summary-cell"><p class="summary-label">Date</p><p class="mt-1.5 font-bold">12 Sep 2026</p></div>
+              <div class="summary-cell"><p class="summary-label">Status</p><p class="status-complete mt-1.5">Analysis complete</p></div>
+            </div>
+          </section>
+
+          <section id="patterns-section" class="analysis-layout reveal reveal-delay mt-12">
+            <div>
+              <div class="section-frame">
+                <p class="eyebrow">Detected Patterns</p>
+                <h2 class="serif-heading mt-2 text-3xl font-bold">What we found</h2>
+                <p class="mt-3 max-w-xl leading-7 text-[#355449]">Three recurring patterns were identified, each backed by evidence from the worksheet.</p>
+              </div>
+              <div class="finding-list">
+                <article id="place-value-finding" class="finding">
+                  <div class="finding-title-row">
+                    <div><span class="pattern-tag">Place-Value Confusion</span><p class="occurrence-line">3 of 5 relevant questions</p></div>
+                    <p class="confidence">89% confidence</p>
+                  </div>
+                  <div class="evidence-box">
+                    <p class="summary-label">Evidence</p>
+                    <div class="evidence-row mt-2"><span>Expected: 304</span><span class="answer-wrong">Student wrote: 34</span></div>
+                    <div class="evidence-row"><span>Expected: 205</span><span class="answer-wrong">Student wrote: 25</span></div>
+                  </div>
+                  <p class="finding-note">Zero is consistently omitted in multi-digit numbers — suggests a place-value gap rather than a careless error.</p>
+                </article>
+                <article class="finding">
+                  <div class="finding-title-row">
+                    <div><span class="pattern-tag">Digit Reversal</span><p class="occurrence-line">1 of 5 relevant questions</p></div>
+                    <p class="confidence">76% confidence</p>
+                  </div>
+                  <div class="evidence-box">
+                    <p class="summary-label">Evidence</p>
+                    <div class="evidence-row mt-2"><span>Expected: 17</span><span class="answer-wrong">Student wrote: 71</span></div>
+                  </div>
+                </article>
+                <article class="finding">
+                  <div class="finding-title-row">
+                    <div><span class="pattern-tag">Calculation Error</span><p class="occurrence-line">1 of 5 relevant questions</p></div>
+                    <p class="confidence">68% confidence</p>
+                  </div>
+                  <div class="evidence-box">
+                    <p class="summary-label">Evidence</p>
+                    <div class="evidence-row mt-2"><span>Expected: 8 + 5 = 13</span><span class="answer-wrong">Student wrote: 12</span></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <aside class="evidence-panel">
+              <div class="evidence-heading"><i data-lucide="file-search" class="h-5 w-5 text-[#355449]"></i><h2 class="serif-heading font-bold">Worksheet Evidence</h2></div>
+              <div class="worksheet">
+                <p class="text-center font-bold">Number Sense Check-in</p>
+                <p class="mt-1 text-center text-sm text-[#617269]">Rahul Kumar</p>
+                <div class="worksheet-line"></div>
+                <div class="problem"><span>1. Write three hundred and four</span><span class="student-answer">34</span></div>
+                <p class="annotation">Zero omitted</p>
+                <div class="problem"><span>2. Write two hundred and five</span><span class="student-answer">25</span></div>
+                <p class="annotation">Zero omitted</p>
+                <div class="problem"><span>3. Write seventeen</span><span class="student-answer">71</span></div>
+                <p class="annotation">Digits reversed</p>
+                <div class="problem"><span>4. 8 + 5 =</span><span class="student-answer">12</span></div>
+                <p class="annotation">Arithmetic error</p>
+              </div>
+              <div class="evidence-key"><span class="key-mark"></span><span>Highlighted responses indicate a mismatch with the expected answer</span></div>
+            </aside>
+          </section>
+
+          <section class="observation reveal reveal-delay-two mt-12">
+            <div class="observation-icon"><i data-lucide="lightbulb" class="h-4 w-4"></i></div>
+            <div>
+              <p class="eyebrow">Teacher Note</p>
+              <h2 class="serif-heading mt-1 text-2xl font-bold">Consider a place-value focus</h2>
+              <p class="mt-2 max-w-4xl leading-7 text-[#355449]">Rahul's most frequent pattern is place-value confusion. A short, focused session on hundreds-tens-ones representation may help before revisiting mixed practice.</p>
+            </div>
+          </section>
+
+          <footer class="reveal reveal-delay-two mt-9">
+            <div class="action-row">
+              <button id="back-button" class="secondary-action"><i data-lucide="arrow-left" class="h-4 w-4"></i><span>Back to dashboard</span></button>
+              <div class="flex items-center flex-wrap gap-5">
+                <button id="review-button" class="review-link">Review Evidence</button>
+                <button id="profile-button" class="primary-action"><i data-lucide="user-round" class="h-4 w-4"></i><span>View Profile</span></button>
+              </div>
+            </div>
+            <p id="interaction-status" class="interaction-status" aria-live="polite"></p>
+          </footer>
+        </div>
+
+        <!-- ---------- STUDENT PROFILE ---------- -->
+        <div id="view-profile" style="display:none;">
+          <nav class="mb-8 flex items-center gap-2 text-sm text-[#617269]">
+            <a href="#" data-goto="dashboard" class="hover:text-[#18332a]">Dashboard</a><span>/</span><a href="#" data-goto="analysis" class="hover:text-[#18332a]">Assessments</a><span>/</span><span class="font-semibold text-[#18332a]">Student Profile</span>
+          </nav>
+
+          <header class="reveal">
+            <p class="eyebrow">Student Profile</p>
+            <h1 class="serif-heading mt-2 text-4xl font-bold">Rahul Kumar</h1>
+            <p class="mt-4 max-w-2xl leading-7 text-[#355449]">Grade 3 · Mathematics &amp; Reading Support</p>
+          </header>
+
+          <section class="reveal reveal-delay mt-8">
+            <div class="summary-strip">
+              <div class="summary-cell"><p class="summary-label">Grade</p><p class="mt-1.5 font-bold">Grade 3</p></div>
+              <div class="summary-cell"><p class="summary-label">Assessments Completed</p><p class="mt-1.5 font-bold">3</p></div>
+              <div class="summary-cell"><p class="summary-label">Current Status</p><p class="status-complete mt-1.5">Improving</p></div>
+              <div class="summary-cell"><p class="summary-label">Priority Area</p><p class="mt-1.5 font-bold">Place-Value Confusion</p></div>
+              <div class="summary-cell"><p class="summary-label">Last Assessment</p><p class="mt-1.5 font-bold">12 Sep 2026</p></div>
+            </div>
+          </section>
+
+          <section class="reveal reveal-delay mt-12">
+            <div class="section-frame">
+              <p class="eyebrow">Overview</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Strengths &amp; areas needing attention</h2>
+              <div class="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div class="evidence-box">
+                  <p class="summary-label" style="color:var(--teal)">Strengths</p>
+                  <ul class="mt-3 space-y-2">
+                    <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-0.5 h-4 w-4 shrink-0 text-[#355449]"></i><span>Strong grasp of single-digit addition and subtraction facts</span></li>
+                    <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-0.5 h-4 w-4 shrink-0 text-[#355449]"></i><span>Reads and follows multi-step word problems accurately</span></li>
+                    <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-0.5 h-4 w-4 shrink-0 text-[#355449]"></i><span>Consistent, legible handwriting across assessments</span></li>
+                  </ul>
+                </div>
+                <div class="evidence-box" style="border-left-color:var(--rust)">
+                  <p class="summary-label" style="color:var(--rust)">Needs Attention</p>
+                  <ul class="mt-3 space-y-2">
+                    <li class="flex items-start gap-2"><i data-lucide="alert-circle" class="mt-0.5 h-4 w-4 shrink-0 text-[#d9542b]"></i><span>Frequently omits the zero placeholder in multi-digit numbers</span></li>
+                    <li class="flex items-start gap-2"><i data-lucide="alert-circle" class="mt-0.5 h-4 w-4 shrink-0 text-[#d9542b]"></i><span>Occasionally reverses two-digit numbers when writing quickly</span></li>
+                    <li class="flex items-start gap-2"><i data-lucide="alert-circle" class="mt-0.5 h-4 w-4 shrink-0 text-[#d9542b]"></i><span>Benefits from extra time when transcribing dictated numbers</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="reveal reveal-delay-two mt-12">
+            <div class="section-frame">
+              <p class="eyebrow">Across All Assessments</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Recurring Error Patterns</h2>
+              <p class="mt-3 max-w-2xl leading-7 text-[#355449]">How often each pattern has appeared across Rahul's 3 completed assessments.</p>
+              <div class="mt-6 border-y border-[#18332a]/15 px-1">
+                <div class="error-row"><span class="font-bold">Place-Value Confusion</span><div class="error-track"><span class="error-fill" style="width:100%;background:#e7ae32"></span></div><span class="text-right font-semibold">3 of 3 assessments</span></div>
+                <div class="error-row"><span class="font-bold">Digit Reversal</span><div class="error-track"><span class="error-fill" style="width:67%;background:#d9542b"></span></div><span class="text-right font-semibold">2 of 3 assessments</span></div>
+                <div class="error-row"><span class="font-bold">Calculation Error</span><div class="error-track"><span class="error-fill" style="width:33%;background:#355449"></span></div><span class="text-right font-semibold">1 of 3 assessments</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="reveal reveal-delay-two mt-12">
+            <div class="section-frame">
+              <p class="eyebrow">History</p>
+              <h2 class="serif-heading mt-2 text-3xl font-bold">Recent Assessment History</h2>
+              <div class="table-scroll mt-6">
+                <table class="assessment-table">
+                  <thead><tr><th>Assessment</th><th>Date</th><th>Patterns Found</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td class="font-bold">Number Sense Check-in</td><td>12 Sep 2026</td><td>3</td><td><span class="status" style="color:var(--teal)">Analysis complete</span></td></tr>
+                    <tr><td class="font-bold">Place-Value Practice Set</td><td>5 Sep 2026</td><td>4</td><td><span class="status" style="color:var(--teal)">Analysis complete</span></td></tr>
+                    <tr><td class="font-bold">Number Sense Baseline</td><td>28 Aug 2026</td><td>6</td><td><span class="status" style="color:var(--teal)">Analysis complete</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="observation reveal reveal-delay-two mt-12">
+            <div class="observation-icon"><i data-lucide="trending-down" class="h-4 w-4"></i></div>
+            <div>
+              <p class="eyebrow">Improvement Trend</p>
+              <h2 class="serif-heading mt-1 text-2xl font-bold">Errors are trending down</h2>
+              <p class="mt-2 max-w-4xl leading-7 text-[#355449]">Total detected errors have gone from 6 → 4 → 3 across Rahul's last three assessments — a steady improvement, with place-value confusion still the most persistent pattern.</p>
+            </div>
+          </section>
+
+          <footer class="reveal reveal-delay-two mt-9">
+            <div class="action-row">
+              <button id="back-to-analysis-button" class="secondary-action"><i data-lucide="arrow-left" class="h-4 w-4"></i><span>Back to Analysis</span></button>
+            </div>
+          </footer>
+        </div>
+
+        <!-- ---------- PLACEHOLDER VIEWS ---------- -->
+        <div id="view-students" style="display:none;">
+          <header class="reveal border-b border-[#18332a]/20 pb-8"><p class="eyebrow mb-3">Students</p><h1 class="serif-heading text-4xl font-bold">Student list</h1></header>
+          <div class="empty-state mt-10"><i data-lucide="users-round" class="mx-auto h-8 w-8 text-[#355449]"></i><p class="serif-heading mt-4 text-xl font-bold">Not built in this prototype yet</p><p class="mt-2 text-[#617269]">See a full example on the <button data-goto="analysis" class="review-link">Rahul Kumar analysis</button> page.</p></div>
+        </div>
+        <div id="view-patterns" style="display:none;">
+          <header class="reveal border-b border-[#18332a]/20 pb-8"><p class="eyebrow mb-3">Error Patterns</p><h1 class="serif-heading text-4xl font-bold">Class-wide patterns</h1></header>
+          <div class="empty-state mt-10"><i data-lucide="scan-search" class="mx-auto h-8 w-8 text-[#355449]"></i><p class="serif-heading mt-4 text-xl font-bold">See the breakdown on the dashboard</p><p class="mt-2 text-[#617269]"><button data-goto="dashboard" class="review-link">Go to Dashboard</button> for the full pattern distribution.</p></div>
+        </div>
+        <div id="view-progress" style="display:none;">
+          <header class="reveal border-b border-[#18332a]/20 pb-8"><p class="eyebrow mb-3">Progress</p><h1 class="serif-heading text-4xl font-bold">Progress over time</h1></header>
+          <div class="empty-state mt-10"><i data-lucide="trending-up" class="mx-auto h-8 w-8 text-[#355449]"></i><p class="serif-heading mt-4 text-xl font-bold">Not built in this prototype yet</p><p class="mt-2 text-[#617269]">This view will chart error counts per category across assessments.</p></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      lucide.createIcons();
+
+      const signin = document.getElementById("view-signin");
+      const shell = document.getElementById("app-shell");
+      const views = ["dashboard", "upload", "analysis", "profile", "students", "patterns", "progress"];
+      const navItems = document.querySelectorAll(".nav-item");
+
+      function showView(name) {
+        signin.style.display = "none";
+        shell.style.display = "grid";
+        views.forEach(function (v) {
+          document.getElementById("view-" + v).style.display = (v === name) ? "block" : "none";
+        });
+        navItems.forEach(function (item) {
+          const isMatch = item.dataset.view === name || (name === "profile" && item.dataset.view === "students");
+          item.classList.toggle("is-active", isMatch);
+          if (isMatch) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      document.getElementById("continue-button").addEventListener("click", function () {
+        showView("dashboard");
+      });
+
+      navItems.forEach(function (item) {
+        item.addEventListener("click", function () { showView(item.dataset.view); });
+      });
+
+      document.querySelectorAll("[data-goto]").forEach(function (el) {
+        el.addEventListener("click", function (e) {
+          e.preventDefault();
+          showView(el.dataset.goto);
+        });
+      });
+
+      const uploadInput = document.getElementById("assessment-upload");
+      const uploadStatus = document.getElementById("upload-file-status");
+      uploadInput.addEventListener("change", function () {
+        if (uploadInput.files && uploadInput.files[0]) {
+          uploadStatus.textContent = "Selected: " + uploadInput.files[0].name;
+        }
+      });
+
+      document.getElementById("cancel-upload").addEventListener("click", function () {
+        document.getElementById("assessment-details-form").reset();
+        uploadStatus.textContent = "";
+      });
+
+      document.getElementById("assessment-details-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        showView("analysis");
+      });
+
+      const viewGroupButton = document.getElementById("view-group-button");
+      if (viewGroupButton) {
+        viewGroupButton.addEventListener("click", function () {
+          const row = document.getElementById("place-value-row");
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.classList.add("attention-flash");
+          setTimeout(function () { row.classList.remove("attention-flash"); }, 1800);
+        });
+      }
+
+      const backButton = document.getElementById("back-button");
+      if (backButton) backButton.addEventListener("click", function () { showView("dashboard"); });
+
+      const reviewButton = document.getElementById("review-button");
+      const status = document.getElementById("interaction-status");
+      if (reviewButton) {
+        reviewButton.addEventListener("click", function () {
+          const patterns = document.getElementById("patterns-section");
+          const placeValue = document.getElementById("place-value-finding");
+          patterns.scrollIntoView({ behavior: "smooth", block: "start" });
+          placeValue.classList.add("is-highlighted");
+          status.textContent = "Reviewing the observed error patterns and supporting evidence.";
+          setTimeout(function () { placeValue.classList.remove("is-highlighted"); }, 1800);
+        });
+      }
+      const profileButton = document.getElementById("profile-button");
+      if (profileButton) {
+        profileButton.addEventListener("click", function () {
+          showView("profile");
+        });
+      }
+
+      const backToAnalysisButton = document.getElementById("back-to-analysis-button");
+      if (backToAnalysisButton) {
+        backToAnalysisButton.addEventListener("click", function () {
+          showView("analysis");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
